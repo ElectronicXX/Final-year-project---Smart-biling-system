@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>👋 Welcome, {{ user.name }}</h3>
+        <span id="time"></span>
+    </div>
+
+    <div id="statusBox" class="alert {% if status != 'Paid' %}alert-danger{% else %}alert-success{% endif %}">
+        {% if status != "Paid" %}
+            🔴 You have unpaid bills!
+        {% else %}
+            🟢 Payment Completed
+        {% endif %}
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3">
+                <h5>👤 Profile</h5>
+                <hr>
+                <p><b>{{ user.name }}</b></p>
+                <p>{{ user.gender }} | {{ user.age }}</p>
+                <p>{{ user.block }} Block</p>
+                <p>Floor {{ user.floor }} | Unit {{ user.unit }} | Room {{ user.room }}</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-white text-center bill-card">
+                <div class="card-body">
+                    <h6>{{ month }}</h6>
+                    <h1>RM {{ amount }}</h1>
+
+                    {% if status != "Paid" %}
+                    <button class="btn btn-light" data-toggle="modal" data-target="#payModal" onclick="startPayment()">
+                        Pay Now
+                    </button>
+                    {% else %}
+                    <span class="badge badge-light">Paid</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>📊 Spending Trend</h5>
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card mt-4 p-3">
+        <h5>📜 Billing History</h5>
+
+        <table class="table text-center mt-3">
+            <tr>
+                <th>Month</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>PDF</th>
+            </tr>
+
+            {% for h in history %}
+            <tr class="{% if h.status != 'Paid' %}table-danger{% else %}table-success{% endif %}">
+                <td>{{ h.month }}</td>
+                <td>RM {{ h.amount }}</td>
+                <td>
+                    {% if h.status == "Paid" %}
+                        🟢 Paid
+                    {% else %}
+                        🔴 Pending
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/download/{{ h.pdf }}" class="btn btn-sm btn-primary">Download</a>
+                </td>
+            </tr>
+            {% endfor %}
+
+        </table>
+    </div>
+
+</div>
+
+<!-- 💳 MODAL -->
+<div class="modal fade" id="payModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5>Scan & Pay</h5>
+                <button class="close" data-dismiss="modal">&times;</button>
+            </div>
+
+            <div class="modal-body text-center">
+                <p>RM {{ amount }}</p>
+                <img src="{{ qr }}" width="200">
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+.bill-card {
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    border-radius:15px;
+}
+.card {
+    border-radius:12px;
+    transition:0.3s;
+}
+.card:hover {
+    transform:translateY(-5px);
+    box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+        labels: {{ months|tojson }},
+        datasets: [{
+            data: {{ totals|tojson }},
+            borderColor: "#007bff",
+            tension: 0.4
+        }]
+    }
+});
+
+
+function updateTime(){
+    let now = new Date();
+    document.getElementById("time").innerText = now.toLocaleString();
+}
+setInterval(updateTime,1000);
+
+function startPayment(){
+
+    console.log("🔥 Payment started");
+
+    setTimeout(() => {
+
+        console.log("🔥 Calling backend...");
+
+        fetch("/confirm_payment")
+        .then(res => res.json())
+        .then(data => {
+
+            console.log("🔥 Done:", data);
+
+            if(data.status === "success"){
+                alert("✅ Payment Successful!");
+                location.reload();
+            }
+
+        });
+
+    }, 1000);
+}
+</script>
+
+{% endblock %}

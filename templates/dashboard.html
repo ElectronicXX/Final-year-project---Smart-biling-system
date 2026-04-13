@@ -1,0 +1,197 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Welcome, Admin 👋</h2>
+
+        <div class="d-flex align-items-center">
+            <input class="form-control mr-3" placeholder="Search..." style="width:200px;">
+            <span class="mr-3">🔔</span>
+            <img src="https://i.pravatar.cc/40" class="rounded-circle">
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-3">
+            <div class="card card-modern bg1">
+                <h6>This Month Revenue</h6>
+                <h2 id="rev">RM {{ totals[-1] if totals else 0 }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card card-modern bg2">
+                <h6>Total Users</h6>
+                <h2 id="users">{{ users|length }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card card-modern bg3">
+                <h6>Paid Users</h6>
+                <h2 id="paid">{{ paid_count }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card card-modern bg4">
+                <h6>Pending</h6>
+                <h2 id="pending">{{ users|length - paid_count }}</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row mt-4">
+
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5>Revenue Trend</h5>
+                <canvas id="chart1"></canvas>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5>Monthly Comparison</h5>
+                <canvas id="chart2"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row mt-4">
+
+        <div class="col-md-6">
+            <div class="card p-3 text-center">
+                <h5>Payment Status</h5>
+                <canvas id="chart3"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+.card-modern {
+    padding:20px;
+    border-radius:15px;
+    color:white;
+    transition:0.3s;
+}
+.card-modern:hover {
+    transform:translateY(-5px);
+    box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+
+.bg1 {background:linear-gradient(135deg,#6fb1fc,#4364f7);}
+.bg2 {background:linear-gradient(135deg,#43e97b,#38f9d7);}
+.bg3 {background:linear-gradient(135deg,#f7971e,#ffd200);}
+.bg4 {background:linear-gradient(135deg,#ff4e50,#f9d423);}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx1 = document.getElementById('chart1').getContext('2d');
+let gradient = ctx1.createLinearGradient(0,0,0,400);
+gradient.addColorStop(0,"rgba(67,233,123,0.6)");
+gradient.addColorStop(1,"rgba(255,255,255,0)");
+
+let chart1 = new Chart(ctx1,{
+    type:'line',
+    data:{
+        labels: {{ months|tojson }},
+        datasets:[{
+            label:"Revenue",
+            data: {{ totals|tojson }},
+            borderColor:"#28a745",
+            backgroundColor:gradient,
+            fill:true,
+            tension:0.4
+        }]
+    }
+});
+
+let chart2 = new Chart(document.getElementById('chart2'),{
+    type:'bar',
+    data:{
+        labels: {{ months|tojson }},
+        datasets:[{
+            label:"Revenue",
+            data: {{ totals|tojson }},
+            backgroundColor:"#4facfe"
+        }]
+    }
+});
+
+let chart3 = new Chart(document.getElementById('chart3'),{
+    type:'doughnut',
+    data:{
+        labels:["Paid","Pending"],
+        datasets:[{
+            data:[{{ paid_count }}, {{ users|length - paid_count }}],
+            backgroundColor:["#28a745","#dc3545"]
+        }]
+    },
+    options:{cutout:"70%"}
+});
+
+setInterval(() => {
+
+    fetch("/api/dashboard_data")
+    .then(res => res.json())
+    .then(data => {
+
+        let latest = data.totals.length ? data.totals[data.totals.length-1] : 0;
+
+        document.getElementById("rev").innerText = "RM " + latest;
+        document.getElementById("users").innerText = data.users;
+        document.getElementById("paid").innerText = data.paid;
+        document.getElementById("pending").innerText = data.pending;
+
+        chart1.data.labels = data.months;
+        chart1.data.datasets[0].data = data.totals;
+        chart1.update();
+
+        chart2.data.labels = data.months;
+        chart2.data.datasets[0].data = data.totals;
+        chart2.update();
+
+        chart3.data.datasets[0].data = [data.paid, data.pending];
+        chart3.update();
+
+    });
+
+}, 5000);
+
+fetch("/api/predict")
+.then(res => res.json())
+.then(data => {
+
+    let newLabels = [...chart1.data.labels];
+
+    for(let i=1;i<=data.predicted.length;i++){
+        newLabels.push("Future " + i);
+    }
+
+    chart1.data.labels = newLabels;
+
+    chart1.data.datasets.push({
+        label: "Prediction",
+        data: [...chart1.data.datasets[0].data, ...data.predicted],
+        borderColor: "orange",
+        borderDash: [5,5],
+        fill: false
+    });
+
+    chart1.update();
+});
+
+</script>
+
+{% endblock %}

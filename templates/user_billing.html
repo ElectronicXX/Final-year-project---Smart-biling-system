@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Your Bill</h2>
+
+<p>Amount: RM {{ amount }}</p>
+
+<a href="/pay">Pay</a>
+
+<div id="qrBox" style="display:none;">
+    <h4>Scan QR</h4>
+    <img src="/{{ qr }}" width="150">
+
+    <br><br>
+
+    <a href="/confirm_payment" class="btn btn-primary">I Have Paid</a>
+</div>
+
+<script>
+function showQR(){
+    document.getElementById("qrBox").style.display = "block";
+}
+</script>
+
+{% endblock %}

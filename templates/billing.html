@@ -1,0 +1,177 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card mt-3">
+            <div class="card-body">
+
+                <h3>Billing History</h3>
+
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Electricity</th>
+                            <th>Water</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for h in history %}
+                        <tr>
+                            <td>{{ h.month }}</td>
+                            <td>{{ h.electricity }}</td>
+                            <td>{{ h.water }}</td>
+                            <td>{{ h.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+
+                <h3>Billing Chart</h3>
+
+                <canvas id="myChart"></canvas>
+
+            </div>
+        </div>
+
+        <h1 class="mt-4">Billing System</h1>
+
+        <div class="card">
+            <div class="card-body text-center">
+
+                <h4>Current Month: {{ bill.month }}</h4>
+
+                <h2 class="text-primary">RM {{ bill.total }}</h2>
+
+                <p>⚡ Electricity: RM {{ bill.electricity }}</p>
+                <p>💧 Water: RM {{ bill.water }}</p>
+
+                <br>
+
+                <a href="/billing" class="btn btn-success">
+                    Generate Monthly Bill
+                </a>
+
+                <button onclick="randomBill()" class="btn btn-warning">
+                    Random Bill
+                </button>
+
+            </div>
+        </div>
+
+        <h1 class="mt-4">Admin Billing</h1>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h3>Billing Overview</h3>
+                <form method="GET">
+                    <select name="month" onchange="this.form.submit()" class="form-control mb-3">
+
+                        {% for m in months %}
+                        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+                            {{ m }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+
+                <table class="table table-bordered text-center">
+
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Amount (RM)</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                {% for u in data %}
+                <tr class="{% if u.status != 'Paid' %}table-danger{% else %}table-success{% endif %}">
+
+                    <td>{{ u.name }}</td>
+
+                    <td>RM {{ u.amount }}</td>
+
+                    <td>
+                        {% if u.status == "Paid" %}
+                            🟢 Paid
+                        {% else %}
+                            🔴 Pending
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if u.status != "Paid" %}
+                        <button onclick="sendReminder({{ u.id }})" class="btn btn-danger btn-sm">
+                            Send Reminder
+                        </button>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endfor %}
+
+                </tbody>
+
+                </table>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<script>
+const ctx = document.getElementById('myChart');
+const months = {{ months|default([])|tojson }};
+const totals = {{ totals|default([])|tojson }};
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: months,
+        datasets: [{
+            label: 'Total Billing (RM)',
+            data: totals,
+            borderWidth: 1
+        }]
+    }
+});
+
+function randomBill(){
+    fetch("/generate_bill")
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === "success"){
+            location.reload();
+        }
+    });
+}
+
+function sendReminder(user_id){
+    fetch("/send_reminder/" + user_id)
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.status === "success"){
+            alert("📧 Reminder Sent!");
+        }
+    });
+}
+</script>
+
+{% endblock %}

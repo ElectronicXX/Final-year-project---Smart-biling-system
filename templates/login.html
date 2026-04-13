@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Billing Login</title>
+
+<style>
+body {
+    margin:0;
+    height:100vh;
+    overflow:hidden;
+    font-family:Arial;
+    background:black;
+}
+
+#canvas {
+    position:fixed;
+    width:100%;
+    height:100%;
+    z-index:-1;
+}
+
+.login-box {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:320px;
+
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(15px);
+
+    border-radius:20px;
+    padding:30px;
+
+    box-shadow:0 0 40px rgba(255,255,255,0.2);
+    border:1px solid rgba(255,255,255,0.2);
+
+    text-align:center;
+    color:white;
+
+    transition:0.5s;
+}
+
+.login-box input {
+    width:100%;
+    padding:10px;
+    margin:10px 0;
+    border:none;
+    border-radius:10px;
+    outline:none;
+    background:rgba(255,255,255,0.1);
+    color:white;
+}
+
+.login-box button {
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(135deg,#4facfe,#00f2fe);
+    color:white;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.login-box button:hover {
+    transform:scale(1.05);
+    box-shadow:0 0 15px #00f2fe;
+}
+
+.login-box input,
+.login-box button {
+    width:100%;
+    box-sizing:border-box;
+}
+
+#loading {
+    display:none;
+    margin-top:10px;
+}
+
+@keyframes shake {
+    0% {transform:translate(-50%,-50%) translateX(0);}
+    25% {transform:translate(-50%,-50%) translateX(-5px);}
+    50% {transform:translate(-50%,-50%) translateX(5px);}
+    75% {transform:translate(-50%,-50%) translateX(-5px);}
+    100% {transform:translate(-50%,-50%) translateX(0);}
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="login-box">
+
+    <h3>Smart Billing</h3>
+
+    <form id="loginForm">
+        <input name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+
+    <div id="loading">⏳ Logging in...</div>
+
+</div>
+
+<script>
+document.getElementById("loginForm").addEventListener("submit", function(e){
+    e.preventDefault();
+
+    let form = new FormData(this);
+    document.getElementById("loading").style.display = "block";
+
+    fetch("/", {
+        method:"POST",
+        body:form
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("loading").style.display = "none";
+
+        if(data.status === "success"){
+
+            document.querySelector(".login-box").style.opacity = "0";
+
+            setTimeout(()=>{
+                window.location.href = "/dashboard";
+            },800);
+
+        }else{
+
+            let box = document.querySelector(".login-box");
+            box.style.animation = "shake 0.3s";
+
+            setTimeout(()=> box.style.animation="",300);
+        }
+
+    })
+    .catch(err => {
+        console.log("ERROR:", err);
+        document.getElementById("loading").style.display = "none";
+        alert("Server error");
+    });
+});
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+let mouse = {x:null,y:null};
+
+window.addEventListener("mousemove", e=>{
+    mouse.x = e.x;
+    mouse.y = e.y;
+});
+
+for(let i=0;i<120;i++){
+    particles.push({
+        x:Math.random()*canvas.width,
+        y:Math.random()*canvas.height,
+        vx:(Math.random()-0.5)*1,
+        vy:(Math.random()-0.5)*1
+    });
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    particles.forEach(p=>{
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,2,0,Math.PI*2);
+
+        ctx.fillStyle="rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#00f2fe";
+
+        ctx.fill();
+    });
+
+    for(let i=0;i<particles.length;i++){
+        for(let j=i+1;j<particles.length;j++){
+
+            let dx = particles[i].x - particles[j].x;
+            let dy = particles[i].y - particles[j].y;
+            let dist = Math.sqrt(dx*dx+dy*dy);
+
+            if(dist < 100){
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x,particles[i].y);
+                ctx.lineTo(particles[j].x,particles[j].y);
+                ctx.strokeStyle="rgba(255,255,255,0.1)";
+                ctx.stroke();
+            }
+        }
+
+        if(mouse.x){
+            let dx = particles[i].x - mouse.x;
+            let dy = particles[i].y - mouse.y;
+            let dist = Math.sqrt(dx*dx+dy*dy);
+
+            if(dist < 120){
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x,particles[i].y);
+                ctx.lineTo(mouse.x,mouse.y);
+                ctx.strokeStyle="rgba(0,200,255,0.3)";
+                ctx.stroke();
+            }
+        }
+    }
+}
+
+function update(){
+    particles.forEach(p=>{
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if(p.x<0||p.x>canvas.width) p.vx*=-1;
+        if(p.y<0||p.y>canvas.height) p.vy*=-1;
+    });
+}
+
+function animate(){
+    draw();
+    update();
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+
+</body>
+</html>
