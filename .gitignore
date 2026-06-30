@@ -5,6 +5,7 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+git-portable/
 static/pdf/*.pdf
 static/qr/*.png
 instance/payment_proofs/
