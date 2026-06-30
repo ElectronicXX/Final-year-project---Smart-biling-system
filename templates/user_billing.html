@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block title %}My Bill | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Resident Portal</span>
+        <h1>My Bill</h1>
+        <p>Review and confirm your current utility payment.</p>
+    </div>
+</header>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <section class="sb-card">
+            <div class="bill-hero text-center align-items-center">
+                <span class="bill-hero-label">Current amount due</span>
+                <strong class="bill-hero-value">RM {{ "%.2f"|format(amount) }}</strong>
+            </div>
+            <div class="sb-card-body text-center">
+                <img src="{{ qr }}" width="190" class="mb-4" alt="Payment QR code">
+                <form method="POST" action="/confirm_payment">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary px-5">Confirm Payment</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

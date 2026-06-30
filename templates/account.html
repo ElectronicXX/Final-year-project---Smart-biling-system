@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% block title %}Account Settings | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Account</span>
+        <h1>Profile Settings</h1>
+        <p>Update your contact details, currency preference and password.</p>
+    </div>
+</header>
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <section class="sb-card">
+            <div class="sb-card-header"><div><h2>Personal Information</h2><p>Used for billing and notifications.</p></div></div>
+            <div class="sb-card-body">
+                <form method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="profile">
+                    <div class="form-group">
+                        <label class="sb-form-label">Full name</label>
+                        <input name="name" value="{{ user.name }}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="sb-form-label">Email address</label>
+                        <input value="{{ user.email }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-7">
+                            <label class="sb-form-label">Phone number</label>
+                            <input name="phone" value="{{ user.phone or '' }}" class="form-control" placeholder="+60...">
+                        </div>
+                        <div class="form-group col-md-5">
+                            <label class="sb-form-label">Preferred currency</label>
+                            <select name="preferred_currency" class="form-control">
+                                {% for code in ["MYR", "USD", "SGD", "EUR", "GBP"] %}
+                                <option value="{{ code }}" {% if user.preferred_currency == code %}selected{% endif %}>{{ code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary px-4">Save Profile</button>
+                </form>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5 mb-4">
+        <section class="sb-card">
+            <div class="sb-card-header"><div><h2>Change Password</h2><p>Use at least eight characters.</p></div></div>
+            <div class="sb-card-body">
+                <form method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="password">
+                    <div class="form-group">
+                        <label class="sb-form-label">Current password</label>
+                        <input type="password" name="current_password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="sb-form-label">New password</label>
+                        <input type="password" name="new_password" minlength="8" class="form-control" required>
+                    </div>
+                    <button class="btn btn-primary px-4">Update Password</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+static/pdf/*.pdf
+static/qr/*.png
+instance/payment_proofs/
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3

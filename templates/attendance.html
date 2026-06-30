@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+{% block title %}Attendance | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Occupancy</span>
+        <h1>Attendance Management</h1>
+        <p>Monitor resident check-ins and correct missing or incorrect records.</p>
+    </div>
+    <form method="GET">
+        <input type="month" name="month" value="{{ selected_month }}" class="form-control" onchange="this.form.submit()">
+    </form>
+</header>
+
+<div class="row">
+    {% set total_checkins = rows|sum(attribute='count') %}
+    {% set checked_today = rows|selectattr('checked_in_today')|list|length %}
+    <div class="col-md-4 mb-4"><article class="sb-card metric-card metric-purple"><div class="metric-icon"><i class="fas fa-calendar"></i></div><span class="metric-label">Selected Month</span><h2 class="metric-value">{{ selected_label }}</h2></article></div>
+    <div class="col-md-4 mb-4"><article class="sb-card metric-card metric-green"><div class="metric-icon"><i class="fas fa-user-check"></i></div><span class="metric-label">Checked In Today</span><h2 class="metric-value">{{ checked_today }} / {{ rows|length }}</h2></article></div>
+    <div class="col-md-4 mb-4"><article class="sb-card metric-card metric-orange"><div class="metric-icon"><i class="fas fa-list-ol"></i></div><span class="metric-label">Monthly Check-ins</span><h2 class="metric-value">{{ total_checkins }}</h2></article></div>
+</div>
+
+<section class="sb-card">
+    <div class="sb-card-header"><div><h2>Resident Attendance</h2><p>Attendance rate uses elapsed days for the current month.</p></div></div>
+    <div class="sb-card-body p-0"><div class="sb-table-wrap"><table class="sb-table">
+        <thead><tr><th>Resident</th><th>Check-ins</th><th>Rate</th><th>Current Streak</th><th>Today</th><th class="text-right">Manage</th></tr></thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td data-label="Resident"><strong>{{ row.user.name }}</strong><small class="d-block text-muted">{{ row.user.block or "-" }} / {{ row.user.unit or "-" }} / {{ row.user.room or "-" }}</small></td>
+                <td data-label="Check-ins">{{ row.count }} of {{ row.elapsed_days }}</td>
+                <td data-label="Rate"><div class="amount-progress mb-1"><span style="width:{{ [row.attendance_rate, 100]|min }}%"></span></div><small>{{ row.attendance_rate }}%</small></td>
+                <td data-label="Streak">{{ row.streak }} day{% if row.streak != 1 %}s{% endif %}</td>
+                <td data-label="Today"><span class="status-pill {% if row.checked_in_today %}status-paid{% else %}status-pending{% endif %}">{{ "Checked in" if row.checked_in_today else "Missing" }}</span></td>
+                <td data-label="Manage" class="text-right">
+                    <button class="btn btn-primary btn-sm" onclick="addCheckin({{ row.user.id }})">Add Date</button>
+                    <button class="btn btn-secondary btn-sm" data-toggle="modal" data-target="#history{{ row.user.id }}">History</button>
+                </td>
+            </tr>
+            {% else %}<tr><td colspan="6" class="empty-state">No residents found.</td></tr>{% endfor %}
+        </tbody>
+    </table></div></div>
+</section>
+
+{% for row in rows %}
+<div class="modal fade" id="history{{ row.user.id }}">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><div><h5 class="modal-title">{{ row.user.name }}</h5><small class="text-muted">{{ row.month }} check-in history</small></div><button class="close" data-dismiss="modal">&times;</button></div>
+        <div class="modal-body">
+            {% for item in row.records %}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div><strong>{{ item.checkin_date.strftime("%A, %d %B") }}</strong><small class="d-block text-muted">{{ item.checked_in_at.strftime("%H:%M") if item.checked_in_at else "Legacy record" }} | {{ item.source or "self" }}</small></div>
+                <button class="btn btn-danger btn-sm" onclick="deleteCheckin({{ item.id }})">Remove</button>
+            </div>
+            {% else %}<div class="empty-state">No check-ins this month.</div>{% endfor %}
+        </div>
+    </div></div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addCheckin(userId) {
+    const value = prompt("Enter check-in date (YYYY-MM-DD):", new Date().toISOString().slice(0, 10));
+    if (!value) return;
+    const form = new FormData();
+    form.append("date", value);
+    form.append("_csrf_token", window.csrfToken);
+    secureFetch(`/attendance/${userId}/add`, {method:"POST", body:form})
+        .then(async response => ({ok:response.ok, data:await response.json()}))
+        .then(result => {alert(result.ok ? (result.data.status === "already" ? "That date already exists." : "Check-in added.") : result.data.error); if(result.ok) location.reload();});
+}
+function deleteCheckin(id) {
+    if (!confirm("Remove this check-in record?")) return;
+    secureFetch(`/attendance/${id}/delete`, {method:"POST"})
+        .then(async response => ({ok:response.ok, data:await response.json()}))
+        .then(result => {alert(result.ok ? "Check-in removed." : result.data.error); if(result.ok) location.reload();});
+}
+</script>
+{% endblock %}

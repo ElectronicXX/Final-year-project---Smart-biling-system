@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+{% block title %}Billing | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div><span class="page-eyebrow">Utilities</span><h1>Billing Management</h1><p>Create itemized bills, filter allocations and automate monthly generation.</p></div>
+    <a href="{{ url_for('portal.reports') }}" class="btn btn-secondary"><i class="fas fa-file-export mr-2"></i>Reports</a>
+</header>
+
+<section class="sb-card mb-4"><div class="sb-card-body">
+    <form method="GET" class="filter-bar">
+        <div><label class="sb-form-label">Search resident</label><input name="q" value="{{ filters.get('q', '') }}" class="form-control" placeholder="Name or email"></div>
+        <div><label class="sb-form-label">Month</label><select name="month" class="form-control">{% for m in months %}<option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></div>
+        <div><label class="sb-form-label">Status</label><select name="status" class="form-control"><option value="">All statuses</option>{% for value in ["Pending", "Partial", "Paid"] %}<option {% if filters.get('status') == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+        <div><label class="sb-form-label">Resident</label><select name="user" class="form-control"><option value="">All residents</option>{% for resident in residents %}<option value="{{ resident.id }}" {% if filters.get('user') == resident.id|string %}selected{% endif %}>{{ resident.name }}</option>{% endfor %}</select></div>
+        <button class="btn btn-primary px-4">Filter</button>
+    </form>
+</div></section>
+
+<div class="row">
+    <div class="col-xl-5 mb-4">
+        <section class="sb-card h-100">
+            <div class="bill-hero">
+                <span class="bill-hero-label">{{ selected_month }} total bill</span>
+                <strong class="bill-hero-value">{{ currency }} {{ "%.2f"|format(bill.total if bill else 0) }}</strong>
+                <span>{{ bill_items|length }} billing item{% if bill_items|length != 1 %}s{% endif %}{% if bill and bill.due_date %} | Due {{ bill.due_date }}{% endif %}</span>
+            </div>
+            <div class="sb-card-body">
+                <form id="billForm">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group col-md-6"><label class="sb-form-label">Billing month</label><input name="month" value="{{ selected_month }}" class="form-control" required></div>
+                        <div class="form-group col-md-3"><label class="sb-form-label">Currency</label><input name="currency" value="{{ currency }}" maxlength="3" class="form-control" required></div>
+                        <div class="form-group col-md-3"><label class="sb-form-label">Due date</label><input type="date" name="due_date" value="{{ bill.due_date if bill and bill.due_date else '' }}" class="form-control"></div>
+                    </div>
+                    <p class="section-label">Billing items</p>
+                    <div id="billItems">
+                        {% for item in bill_items %}
+                        <div class="dynamic-item-row"><input name="item_name" value="{{ item.name }}" class="form-control" required><input type="number" min="0" step="0.01" name="item_amount" value="{{ item.amount }}" class="form-control" required><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>
+                        {% else %}
+                        <div class="dynamic-item-row"><input name="item_name" value="Electricity" class="form-control" required><input type="number" min="0" step="0.01" name="item_amount" class="form-control" required><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm mb-3" onclick="addItem('billItems','item_name','item_amount')"><i class="fas fa-plus mr-1"></i>Add Item</button>
+                    <button class="btn btn-primary btn-block py-2"><i class="fas fa-save mr-2"></i>Save Monthly Bill</button>
+                </form>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-7 mb-4"><section class="sb-card h-100"><div class="sb-card-header"><div><h2>Billing Trend</h2><p>Monthly itemized utility totals.</p></div></div><div class="sb-card-body chart-box"><canvas id="myChart"></canvas></div></section></div>
+</div>
+
+<section class="sb-card mb-4">
+    <div class="sb-card-header"><div><h2>Resident Allocations</h2><p>Searchable payment status for {{ selected_month }}.</p></div></div>
+    <div class="sb-card-body p-0"><div class="sb-table-wrap"><table class="sb-table">
+        <thead><tr><th>Resident</th><th>Billed</th><th>Paid</th><th>Balance</th><th>Status</th><th class="text-right">Action</th></tr></thead>
+        <tbody>{% for u in data %}<tr>
+            <td data-label="Resident"><strong>{{ u.name }}</strong><small class="d-block text-muted">{{ u.email }}</small></td>
+            <td data-label="Billed">{{ currency }} {{ "%.2f"|format(u.amount) }}</td>
+            <td data-label="Paid">{{ currency }} {{ "%.2f"|format(u.paid_amount or 0) }}</td>
+            <td data-label="Balance">{{ currency }} {{ "%.2f"|format(u.balance) }}</td>
+            <td data-label="Status"><span class="status-pill {% if u.status == 'Paid' %}status-paid{% else %}status-pending{% endif %}">{{ u.status }}</span></td>
+            <td data-label="Action" class="text-right">{% if u.status != "Paid" %}<button onclick="sendReminder({{ u.id }})" class="btn btn-danger btn-sm px-3"><i class="fas fa-paper-plane mr-1"></i>Reminder</button>{% else %}<span class="text-muted">Completed</span>{% endif %}</td>
+        </tr>{% else %}<tr><td colspan="6" class="empty-state">No residents match these filters.</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+</section>
+
+<div class="row">
+    <div class="col-lg-7 mb-4"><section class="sb-card h-100"><div class="sb-card-header"><div><h2>Billing History</h2><p>Recorded periods and totals.</p></div></div><div class="sb-card-body p-0"><div class="sb-table-wrap"><table class="sb-table">
+        <thead><tr><th>Month</th><th>Currency</th><th>Items</th><th>Total</th><th>Source</th></tr></thead>
+        <tbody>{% for h in history %}<tr><td data-label="Month"><strong>{{ h.month }}</strong></td><td data-label="Currency">{{ h.currency or "MYR" }}</td><td data-label="Items">{{ h.items|length or 2 }}</td><td data-label="Total"><strong>{{ h.currency or "MYR" }} {{ "%.2f"|format(h.total) }}</strong></td><td data-label="Source">{{ "Automatic" if h.auto_generated else "Manual" }}</td></tr>{% else %}<tr><td colspan="5" class="empty-state">No billing history yet.</td></tr>{% endfor %}</tbody>
+    </table></div></div></section></div>
+    <div class="col-lg-5 mb-4"><section class="sb-card h-100"><div class="sb-card-header"><div><h2>Automatic Billing</h2><p>Create the monthly bill on a fixed day.</p></div></div><div class="sb-card-body">
+        <form id="scheduleForm">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="form-row"><div class="form-group col-8"><label class="sb-form-label">Schedule name</label><input name="name" value="{{ schedule.name if schedule else 'Monthly Utilities' }}" class="form-control"></div><div class="form-group col-4"><label class="sb-form-label">Day</label><input type="number" min="1" max="28" name="day_of_month" value="{{ schedule.day_of_month if schedule else 1 }}" class="form-control"></div></div>
+            <div class="form-group"><label class="sb-form-label">Currency</label><input name="currency" value="{{ schedule.currency if schedule else currency }}" maxlength="3" class="form-control"></div>
+            <div id="scheduleItems">
+                {% for item in schedule_items %}
+                <div class="dynamic-item-row"><input name="schedule_item_name" value="{{ item.name }}" class="form-control"><input type="number" min="0" step="0.01" name="schedule_item_amount" value="{{ item.amount }}" class="form-control"><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>
+                {% else %}
+                <div class="dynamic-item-row"><input name="schedule_item_name" value="Electricity" class="form-control"><input type="number" min="0" step="0.01" name="schedule_item_amount" class="form-control"><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button></div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm mb-3" onclick="addItem('scheduleItems','schedule_item_name','schedule_item_amount')"><i class="fas fa-plus mr-1"></i>Add Scheduled Item</button>
+            <div class="custom-control custom-switch mb-2"><input type="checkbox" class="custom-control-input" id="enabled" name="enabled" {% if schedule and schedule.enabled %}checked{% endif %}><label class="custom-control-label" for="enabled">Enable automatic generation</label></div>
+            <div class="custom-control custom-switch mb-3"><input type="checkbox" class="custom-control-input" id="sendReminders" name="send_reminders" {% if not schedule or schedule.send_reminders %}checked{% endif %}><label class="custom-control-label" for="sendReminders">Create resident notifications</label></div>
+            <button class="btn btn-primary btn-block">Save Schedule</button>
+        </form>
+    </div></section></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+new Chart(document.getElementById("myChart"),{type:"bar",data:{labels:{{ chart_months|default([])|tojson }},datasets:[{data:{{ totals|default([])|tojson }},backgroundColor:"#625cf6",borderRadius:8,maxBarThickness:45}]},options:{maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:"#efeff6"}}},plugins:{legend:{display:false}}}});
+function addItem(containerId,nameField,amountField){const row=document.createElement("div");row.className="dynamic-item-row";row.innerHTML=`<input name="${nameField}" class="form-control" placeholder="Item name" required><input type="number" min="0" step="0.01" name="${amountField}" class="form-control" placeholder="Amount" required><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;document.getElementById(containerId).appendChild(row);}
+document.getElementById("billForm").addEventListener("submit",function(e){e.preventDefault();secureFetch("/generate_bill",{method:"POST",body:new FormData(this)}).then(async r=>({ok:r.ok,data:await r.json()})).then(r=>r.ok?location.href="/billing?month="+encodeURIComponent(r.data.month):alert(r.data.error||"Unable to save bill."));});
+document.getElementById("scheduleForm").addEventListener("submit",function(e){e.preventDefault();secureFetch("/billing/schedule",{method:"POST",body:new FormData(this)}).then(async r=>({ok:r.ok,data:await r.json()})).then(r=>{alert(r.ok?"Schedule saved.":r.data.error||"Unable to save schedule.");if(r.ok)location.reload();});});
+function sendReminder(userId){const form=new FormData();form.append("month",{{ selected_month|tojson }});form.append("_csrf_token",window.csrfToken);secureFetch("/send_reminder/"+userId,{method:"POST",body:form}).then(async r=>({ok:r.ok,data:await r.json()})).then(r=>alert(r.ok?(r.data.email_status==="sent"?"Reminder sent.":"Notification created; email status: "+r.data.email_status):(r.data.error||"Unable to send reminder.")));}
+</script>
+{% endblock %}

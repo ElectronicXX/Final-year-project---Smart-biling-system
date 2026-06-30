@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% block title %}Integrations | Smart Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <div class="page-eyebrow">System Settings</div>
+        <h1 class="mb-1">Integration Center</h1>
+        <p class="text-muted mb-0">Manage payments, email, SMS and WhatsApp from one secure page.</p>
+    </div>
+    <span class="badge badge-light px-3 py-2"><i class="fas fa-lock mr-2"></i>Secrets encrypted at rest</span>
+</div>
+
+<div class="alert alert-info sb-alert">
+    Keep <strong>SECRET_KEY</strong> unchanged after saving credentials. Payment and WhatsApp providers must also be configured with the public webhook URL shown below.
+</div>
+
+<div class="row">
+    {% for provider in providers %}
+    <div class="col-xl-6 mb-4" id="{{ provider.name }}">
+        <section class="sb-card h-100">
+            <div class="sb-card-header d-flex justify-content-between align-items-start">
+                <div>
+                    <h2><i class="{% if provider.name in ['paypal', 'whatsapp'] %}fab{% else %}fas{% endif %} fa-{{ provider.metadata.icon }} mr-2"></i>{{ provider.metadata.label }}</h2>
+                    <p class="mb-0">
+                        {% if provider.setting and provider.setting.enabled %}Enabled{% else %}Disabled{% endif %}
+                        {% if provider.setting and provider.setting.last_tested_at %}
+                        · Last tested {{ provider.setting.last_tested_at.strftime("%Y-%m-%d %H:%M") }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% if provider.setting and provider.setting.last_test_status == "success" %}
+                <span class="badge badge-success">Connected</span>
+                {% elif provider.setting and provider.setting.last_test_status == "failed" %}
+                <span class="badge badge-danger">Test failed</span>
+                {% else %}
+                <span class="badge badge-secondary">Not tested</span>
+                {% endif %}
+            </div>
+            <div class="sb-card-body">
+                <form method="POST" action="{{ url_for('portal.update_integration', provider=provider.name) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <div class="custom-control custom-switch mb-4">
+                        <input class="custom-control-input" type="checkbox" id="enabled-{{ provider.name }}" name="enabled"
+                               {% if provider.setting and provider.setting.enabled %}checked{% endif %}>
+                        <label class="custom-control-label" for="enabled-{{ provider.name }}">Enable this integration</label>
+                    </div>
+
+                    {% for name, label, field_type, secret in provider.metadata.fields %}
+                    {% if field_type == "checkbox" %}
+                    <div class="custom-control custom-checkbox mb-3">
+                        <input class="custom-control-input" type="checkbox" id="{{ provider.name }}-{{ name }}" name="{{ name }}"
+                               {% if provider.config_values[name] %}checked{% endif %}>
+                        <label class="custom-control-label" for="{{ provider.name }}-{{ name }}">{{ label }}</label>
+                    </div>
+                    {% else %}
+                    <div class="form-group">
+                        <label for="{{ provider.name }}-{{ name }}">{{ label }}</label>
+                        <input class="form-control" id="{{ provider.name }}-{{ name }}" name="{{ name }}"
+                               type="{{ field_type }}" value="{{ provider.config_values[name] }}" autocomplete="new-password">
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if provider.name in ["stripe", "paypal", "razorpay"] %}
+                    <div class="small text-muted mb-3">
+                        Webhook URL: <code>{{ webhook_base }}/webhooks/{{ provider.name }}</code>
+                    </div>
+                    {% elif provider.name == "whatsapp" %}
+                    <div class="small text-muted mb-3">
+                        Webhook URL: <code>{{ webhook_base }}/webhooks/whatsapp</code>
+                    </div>
+                    {% endif %}
+
+                    {% if provider.setting and provider.setting.last_test_message %}
+                    <div class="small text-muted mb-3">{{ provider.setting.last_test_message }}</div>
+                    {% endif %}
+                    <div class="d-flex">
+                        <button class="btn btn-primary mr-2" type="submit"><i class="fas fa-save mr-2"></i>Save settings</button>
+                        <button class="btn btn-outline-primary integration-test" type="button"
+                                data-provider="{{ provider.name }}"
+                                {% if not provider.setting %}disabled{% endif %}>
+                            <i class="fas fa-satellite-dish mr-2"></i>Test connection
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll(".integration-test").forEach((button) => {
+    button.addEventListener("click", async () => {
+        const original = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Testing';
+        try {
+            const response = await secureFetch(`/integrations/${button.dataset.provider}/test`, {method: "POST"});
+            const data = await response.json();
+            alert(data.message || (response.ok ? "Connection succeeded." : "Connection failed."));
+            window.location.reload();
+        } catch (error) {
+            alert("Unable to run the connection test.");
+            button.disabled = false;
+            button.innerHTML = original;
+        }
+    });
+});
+</script>
+{% endblock %}

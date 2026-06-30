@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Smart Billing{% endblock %}</title>
+
+    <link rel="stylesheet" href="/static/plugins/adminlte/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="/static/plugins/adminlte/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+</head>
+
+<body class="hold-transition sidebar-mini layout-fixed sb-app">
+<div class="wrapper">
+    <nav class="main-header navbar navbar-expand navbar-white">
+        <button class="btn btn-link sb-menu-button" data-widget="pushmenu" type="button" aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+        <span class="sb-top-title">
+            {% if session.get("role") in ["admin", "finance"] %}Management Console{% else %}Resident Portal{% endif %}
+        </span>
+
+        <div class="ml-auto sb-user-area">
+            <button type="button" class="btn sb-logout" id="themeToggle" title="Toggle theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a href="{{ url_for('portal.notifications') }}" class="btn sb-logout position-relative" title="Notifications">
+                <i class="fas fa-bell"></i>
+                {% if unread_count %}
+                <span class="sb-notification-count">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+            <div class="sb-user-copy">
+                <span class="sb-user-name">{{ current_account.name if current_account else "Smart Billing" }}</span>
+                <span class="sb-user-role">{{ session.get("role", "account") }}</span>
+            </div>
+            <a href="{{ url_for('portal.account') }}" class="sb-avatar">
+                {{ (current_account.name if current_account else session.get("role", "S"))[0]|upper }}
+            </a>
+            <form method="POST" action="{{ url_for('auth.logout') }}" class="mb-0">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn sb-logout" title="Logout" aria-label="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <aside class="main-sidebar elevation-0">
+        <a href="{{ url_for('admin.dashboard') if session.get('role') in ['admin', 'finance'] else url_for('admin.user_dashboard') }}"
+           class="brand-link">
+            <span class="sb-brand-mark">SB</span>
+            <span class="sb-brand-text">Smart Billing</span>
+        </a>
+
+        <div class="sidebar">
+            <div class="sb-sidebar-label">Workspace</div>
+            <nav>
+                <ul class="nav nav-pills nav-sidebar flex-column" role="menu">
+                    {% if session.get("role") in ["admin", "finance"] %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.dashboard') }}"
+                           class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">
+                            <i class="nav-icon fas fa-chart-pie"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+                    {% if session.get("role") == "admin" %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.users') }}"
+                           class="nav-link {% if request.path == '/users' %}active{% endif %}">
+                            <i class="nav-icon fas fa-user-friends"></i>
+                            <p>Residents</p>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.billing') }}"
+                           class="nav-link {% if request.path == '/billing' %}active{% endif %}">
+                            <i class="nav-icon fas fa-receipt"></i>
+                            <p>Billing</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('portal.reports') }}"
+                           class="nav-link {% if request.path == '/reports' %}active{% endif %}">
+                            <i class="nav-icon fas fa-file-export"></i>
+                            <p>Reports</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('portal.attendance') }}"
+                           class="nav-link {% if request.path == '/attendance' %}active{% endif %}">
+                            <i class="nav-icon fas fa-calendar-check"></i>
+                            <p>Attendance</p>
+                        </a>
+                    </li>
+                    {% if session.get("role") == "admin" %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('portal.audit_logs') }}"
+                           class="nav-link {% if request.path == '/audit' %}active{% endif %}">
+                            <i class="nav-icon fas fa-history"></i>
+                            <p>Audit Log</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('portal.integrations') }}"
+                           class="nav-link {% if request.path == '/integrations' %}active{% endif %}">
+                            <i class="nav-icon fas fa-plug"></i>
+                            <p>Integrations</p>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% else %}
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.user_dashboard') }}"
+                           class="nav-link {% if request.path == '/user_dashboard' %}active{% endif %}">
+                            <i class="nav-icon fas fa-th-large"></i>
+                            <p>My Dashboard</p>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item mt-3">
+                        <a href="{{ url_for('portal.notifications') }}"
+                           class="nav-link {% if request.path == '/notifications' %}active{% endif %}">
+                            <i class="nav-icon fas fa-bell"></i>
+                            <p>Notifications {% if unread_count %}<span class="badge badge-light ml-2">{{ unread_count }}</span>{% endif %}</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('portal.account') }}"
+                           class="nav-link {% if request.path == '/account' %}active{% endif %}">
+                            <i class="nav-icon fas fa-user-cog"></i>
+                            <p>Account Settings</p>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+        <main class="sb-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} sb-alert alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+                {% endfor %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="/static/plugins/adminlte/plugins/jquery/jquery.min.js"></script>
+<script src="/static/plugins/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/plugins/adminlte/dist/js/adminlte.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+window.csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+window.secureFetch = (url, options = {}) => {
+    options.headers = Object.assign({}, options.headers, {"X-CSRF-Token": window.csrfToken});
+    return fetch(url, options);
+};
+
+if (window.Chart) {
+    Chart.defaults.color = "#8a8aa3";
+    Chart.defaults.font.family = 'Inter, "Segoe UI", Arial, sans-serif';
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+}
+
+const storedTheme = localStorage.getItem("sb-theme");
+if (storedTheme === "dark") document.body.classList.add("sb-dark");
+const themeToggle = document.getElementById("themeToggle");
+if (themeToggle) {
+    const updateThemeIcon = () => {
+        themeToggle.innerHTML = document.body.classList.contains("sb-dark")
+            ? '<i class="fas fa-sun"></i>'
+            : '<i class="fas fa-moon"></i>';
+    };
+    updateThemeIcon();
+    themeToggle.addEventListener("click", () => {
+        document.body.classList.toggle("sb-dark");
+        localStorage.setItem(
+            "sb-theme",
+            document.body.classList.contains("sb-dark") ? "dark" : "light"
+        );
+        updateThemeIcon();
+    });
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

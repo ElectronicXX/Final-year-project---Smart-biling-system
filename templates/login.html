@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Billing Login</title>
+    <style>
+        :root {
+            --navy: #0d0d45;
+            --navy-light: #171765;
+            --primary: #625cf6;
+            --primary-dark: #5049e8;
+            --text: #24233f;
+            --muted: #8b8ba3;
+            --line: #e9e9f1;
+            --background: #e8ebf8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            overflow-x: hidden;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 8% 18%, #fff 0 7px, transparent 8px),
+                radial-gradient(circle at 92% 22%, #f8f9ff 0 8px, transparent 9px),
+                radial-gradient(circle at 94% 90%, #f8f9ff 0 9px, transparent 10px),
+                linear-gradient(135deg, #eef0fb, #dde2f4);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            z-index: -1;
+            width: 760px;
+            height: 760px;
+            border: 2px solid rgba(98, 92, 246, .08);
+            border-radius: 50%;
+        }
+
+        body::before {
+            top: -310px;
+            right: -190px;
+        }
+
+        body::after {
+            bottom: -560px;
+            left: -140px;
+        }
+
+        .auth-shell {
+            width: min(1120px, 100%);
+            min-height: 680px;
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 30px 80px rgba(35, 36, 89, .16);
+        }
+
+        .showcase {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 64px 72px 48px;
+            color: #fff;
+            background:
+                linear-gradient(145deg, rgba(26, 25, 103, .4), transparent 48%),
+                var(--navy);
+        }
+
+        .showcase::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            opacity: .28;
+            background-image:
+                linear-gradient(135deg, rgba(111, 103, 255, .26) 25%, transparent 25%),
+                linear-gradient(225deg, rgba(111, 103, 255, .16) 25%, transparent 25%);
+            background-position: 0 0, 16px 0;
+            background-size: 32px 32px;
+            mask-image: linear-gradient(135deg, #000, transparent 55%, #000);
+        }
+
+        .brand,
+        .dashboard-preview,
+        .showcase-copy,
+        .slider-dots {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            font-size: 25px;
+            font-weight: 700;
+            letter-spacing: -.7px;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 13px;
+            color: #fff;
+            background: linear-gradient(145deg, #ff3d91, #6a5cff);
+            box-shadow: 0 10px 28px rgba(98, 92, 246, .35);
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .shape {
+            position: absolute;
+            z-index: 1;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(145deg, #9b4dff, #5b58ff);
+            transform: rotate(12deg);
+        }
+
+        .shape-one {
+            top: 92px;
+            right: 48px;
+        }
+
+        .shape-two {
+            right: 55px;
+            bottom: 125px;
+        }
+
+        .shape-three {
+            left: 48px;
+            top: 275px;
+            background: linear-gradient(145deg, #ff315f, #ff8d35);
+        }
+
+        .dashboard-preview {
+            width: 88%;
+            margin: 58px auto 40px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, .3);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, .12);
+            box-shadow: 0 24px 55px rgba(0, 0, 0, .32);
+            transform: perspective(900px) rotateY(-3deg);
+        }
+
+        .preview-window {
+            min-height: 235px;
+            display: grid;
+            grid-template-columns: 55px 1fr;
+            overflow: hidden;
+            border-radius: 13px;
+            background: #f7f8fd;
+        }
+
+        .preview-sidebar {
+            padding: 18px 12px;
+            background: #272260;
+        }
+
+        .preview-sidebar span,
+        .preview-line,
+        .preview-card {
+            display: block;
+            border-radius: 4px;
+        }
+
+        .preview-sidebar span {
+            height: 6px;
+            margin-bottom: 16px;
+            background: rgba(255, 255, 255, .28);
+        }
+
+        .preview-main {
+            padding: 20px;
+        }
+
+        .preview-line {
+            width: 33%;
+            height: 8px;
+            margin-bottom: 18px;
+            background: #d9dbeb;
+        }
+
+        .preview-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .preview-card {
+            height: 42px;
+            background: #fff;
+            box-shadow: 0 5px 14px rgba(31, 30, 83, .08);
+        }
+
+        .preview-card:nth-child(1) {
+            border-top: 4px solid #6b63ff;
+        }
+
+        .preview-card:nth-child(2) {
+            border-top: 4px solid #ff68a5;
+        }
+
+        .preview-card:nth-child(3) {
+            border-top: 4px solid #5bd1b9;
+        }
+
+        .preview-table {
+            margin-top: 16px;
+            padding: 15px;
+            border-radius: 7px;
+            background: #fff;
+        }
+
+        .preview-table span {
+            display: block;
+            height: 6px;
+            margin: 9px 0;
+            border-radius: 3px;
+            background: #e7e8f2;
+        }
+
+        .showcase-copy {
+            margin-top: auto;
+            text-align: center;
+        }
+
+        .showcase-copy h1 {
+            margin: 0 0 14px;
+            font-size: 29px;
+            letter-spacing: -.8px;
+        }
+
+        .showcase-copy p {
+            max-width: 370px;
+            margin: auto;
+            color: rgba(255, 255, 255, .65);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .slider-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 36px;
+        }
+
+        .slider-dots span {
+            width: 28px;
+            height: 3px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, .18);
+        }
+
+        .slider-dots span:first-child {
+            background: #7169ff;
+        }
+
+        .login-panel {
+            display: grid;
+            place-items: center;
+            padding: 64px;
+            background: #fff;
+        }
+
+        .login-content {
+            width: min(390px, 100%);
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .login-content h2 {
+            margin: 0;
+            color: #22213d;
+            font-size: 32px;
+            letter-spacing: -.9px;
+        }
+
+        .subtitle {
+            margin: 12px 0 34px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a4963;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            left: 16px;
+            color: #a8a8b8;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            height: 52px;
+            padding: 0 48px 0 45px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            outline: none;
+            color: var(--text);
+            background: #fff;
+            font: inherit;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(98, 92, 246, .1);
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            border: 0;
+            color: #9999ad;
+            background: transparent;
+            cursor: pointer;
+            transform: translateY(-50%);
+        }
+
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 4px 0 26px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remember input {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--primary);
+        }
+
+        .support-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 52px;
+            border: 0;
+            border-radius: 9px;
+            color: #fff;
+            background: linear-gradient(90deg, #6962f5, #5b55ee);
+            box-shadow: 0 13px 26px rgba(98, 92, 246, .22);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .login-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 32px rgba(98, 92, 246, .3);
+        }
+
+        .login-button:disabled {
+            opacity: .7;
+            cursor: wait;
+        }
+
+        .message {
+            min-height: 20px;
+            margin-top: 18px;
+            color: #d3485f;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .login-footer {
+            margin-top: 42px;
+            color: #aaaabd;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 850px) {
+            body {
+                padding: 0;
+                background: #fff;
+            }
+
+            .auth-shell {
+                min-height: 100vh;
+                grid-template-columns: 1fr;
+                border-radius: 0;
+            }
+
+            .showcase {
+                min-height: 280px;
+                padding: 34px;
+            }
+
+            .dashboard-preview {
+                position: absolute;
+                top: 35px;
+                right: 25px;
+                width: 42%;
+                margin: 0;
+            }
+
+            .preview-window {
+                min-height: 150px;
+            }
+
+            .showcase-copy {
+                width: 48%;
+                margin-top: 65px;
+                text-align: left;
+            }
+
+            .slider-dots {
+                display: none;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .showcase {
+                min-height: 220px;
+                padding: 30px 26px;
+            }
+
+            .dashboard-preview,
+            .shape {
+                display: none;
+            }
+
+            .showcase-copy {
+                width: 100%;
+                margin-top: auto;
+                text-align: left;
+            }
+
+            .showcase-copy h1 {
+                font-size: 24px;
+            }
+
+            .login-panel {
+                align-items: start;
+                padding: 42px 26px;
+            }
+
+            .login-content h2 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="auth-shell">
+        <section class="showcase" aria-label="Smart Billing overview">
+            <div class="brand">
+                <span class="brand-mark">SB</span>
+                <span>Smart Billing</span>
+            </div>
+
+            <span class="shape shape-one"></span>
+            <span class="shape shape-two"></span>
+            <span class="shape shape-three"></span>
+
+            <div class="dashboard-preview" aria-hidden="true">
+                <div class="preview-window">
+                    <div class="preview-sidebar">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="preview-main">
+                        <span class="preview-line"></span>
+                        <div class="preview-cards">
+                            <span class="preview-card"></span>
+                            <span class="preview-card"></span>
+                            <span class="preview-card"></span>
+                        </div>
+                        <div class="preview-table">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="showcase-copy">
+                <h1>Easy to use Dashboard</h1>
+                <p>Manage hostel utilities, resident check-ins, payments and monthly billing from one place.</p>
+            </div>
+
+            <div class="slider-dots" aria-hidden="true">
+                <span></span><span></span><span></span>
+            </div>
+        </section>
+
+        <section class="login-panel">
+            <div class="login-content">
+                <p class="eyebrow">Welcome back</p>
+                <h2>Sign in to your account</h2>
+                <p class="subtitle">Enter your account details to access the Smart Billing dashboard.</p>
+
+                <form id="loginForm">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="field">
+                        <label for="email">Email address</label>
+                        <div class="input-wrap">
+                            <span class="input-icon">@</span>
+                            <input id="email" type="email" name="email"
+                                   placeholder="name@example.com" autocomplete="email" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <div class="input-wrap">
+                            <span class="input-icon">&#128274;</span>
+                            <input id="password" type="password" name="password"
+                                   placeholder="Enter your password" autocomplete="current-password" required>
+                            <button type="button" id="passwordToggle" class="password-toggle"
+                                    aria-label="Show password">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="remember">
+                            <input type="checkbox" name="remember">
+                            <span>Remember me</span>
+                        </label>
+                        <a class="support-link" href="mailto:support@smartbilling.local">Need help?</a>
+                    </div>
+
+                    <button id="loginButton" class="login-button" type="submit">Sign In</button>
+                    <div id="message" class="message" role="alert" aria-live="polite"></div>
+                </form>
+
+                <p class="login-footer">Secure access for administrators and residents</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const form = document.getElementById("loginForm");
+        const button = document.getElementById("loginButton");
+        const message = document.getElementById("message");
+        const password = document.getElementById("password");
+        const passwordToggle = document.getElementById("passwordToggle");
+
+        passwordToggle.addEventListener("click", () => {
+            const isHidden = password.type === "password";
+            password.type = isHidden ? "text" : "password";
+            passwordToggle.textContent = isHidden ? "Hide" : "Show";
+            passwordToggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            message.textContent = "";
+            button.disabled = true;
+            button.textContent = "Signing In...";
+
+            try {
+                const response = await fetch("/", {
+                    method: "POST",
+                    body: new FormData(form)
+                });
+                const data = await response.json();
+
+                if (!response.ok || data.status !== "success") {
+                    message.textContent = "Incorrect email or password. Please try again.";
+                    return;
+                }
+
+                button.textContent = "Welcome";
+                window.location.href = data.redirect;
+            } catch (error) {
+                message.textContent = "Unable to reach the server. Please try again.";
+            } finally {
+                if (!message.textContent) {
+                    return;
+                }
+                button.disabled = false;
+                button.textContent = "Sign In";
+            }
+        });
+    </script>
+</body>
+</html>

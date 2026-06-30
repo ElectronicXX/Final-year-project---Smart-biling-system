@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block title %}Audit Log | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Security</span>
+        <h1>Audit Log</h1>
+        <p>Track account, billing, payment and export activity.</p>
+    </div>
+</header>
+<section class="sb-card">
+    <div class="sb-card-body p-0">
+        <div class="sb-table-wrap">
+            <table class="sb-table">
+                <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th><th>IP</th></tr></thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td data-label="Time">{{ log.created_at.strftime("%d %b %Y %H:%M") }}</td>
+                        <td data-label="Actor">{{ users.get(log.actor_id).name if users.get(log.actor_id) else "System" }}</td>
+                        <td data-label="Action"><span class="status-pill status-admin">{{ log.action }}</span></td>
+                        <td data-label="Entity">{{ log.entity_type }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</td>
+                        <td data-label="Details"><small>{{ log.details or "-" }}</small></td>
+                        <td data-label="IP">{{ log.ip_address or "-" }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="empty-state">No audit entries yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}Notifications | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Messages</span>
+        <h1>Notification Center</h1>
+        <p>Billing updates, reminders and payment activity in one place.</p>
+    </div>
+</header>
+
+<section class="sb-card">
+    {% for item in notifications %}
+    <article class="notification-item {% if not item.is_read %}is-unread{% endif %}" id="notification-{{ item.id }}">
+        <span class="notification-icon"><i class="fas fa-bell"></i></span>
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between">
+                <strong>{{ item.title }}</strong>
+                <small class="text-muted">{{ item.created_at.strftime("%d %b %Y %H:%M") }}</small>
+            </div>
+            <p class="text-muted mb-2">{{ item.message }}</p>
+            {% if item.link %}<a href="{{ item.link }}" class="small">Open details</a>{% endif %}
+        </div>
+        {% if not item.is_read %}
+        <button class="btn btn-secondary btn-sm" onclick="markRead({{ item.id }})">Mark read</button>
+        {% endif %}
+    </article>
+    {% else %}
+    <div class="empty-state">You have no notifications.</div>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markRead(id) {
+    secureFetch(`/notifications/${id}/read`, {method: "POST"})
+        .then(response => response.json())
+        .then(() => {
+            document.getElementById(`notification-${id}`).classList.remove("is-unread");
+            location.reload();
+        });
+}
+</script>
+{% endblock %}

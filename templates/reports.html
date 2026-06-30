@@ -1,0 +1,134 @@
+{% extends "layout.html" %}
+{% block title %}Reports | Smart Billing{% endblock %}
+{% block content %}
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Analytics</span>
+        <h1>Billing Reports</h1>
+        <p>Search, filter and export billing and collection data.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('portal.export_csv', **filters) }}" class="btn btn-secondary px-3"><i class="fas fa-file-csv mr-2"></i>CSV</a>
+        <a href="{{ url_for('portal.export_xlsx', **filters) }}" class="btn btn-primary px-3"><i class="fas fa-file-excel mr-2"></i>Excel</a>
+    </div>
+</header>
+
+<div class="row">
+    {% for label, value, color, icon in [
+        ("Billed", summary.billed, "purple", "file-invoice-dollar"),
+        ("Collected", summary.collected, "green", "hand-holding-usd"),
+        ("Outstanding", summary.outstanding, "orange", "hourglass-half"),
+        ("Overdue Bills", summary.overdue, "red", "exclamation-triangle")
+    ] %}
+    <div class="col-xl-3 col-sm-6 mb-4">
+        <article class="sb-card metric-card metric-{{ color }}">
+            <div class="metric-icon"><i class="fas fa-{{ icon }}"></i></div>
+            <span class="metric-label">{{ label }}</span>
+            <h2 class="metric-value">{% if label == "Overdue Bills" %}{{ value }}{% else %}RM {{ "%.2f"|format(value) }}{% endif %}</h2>
+        </article>
+    </div>
+    {% endfor %}
+</div>
+
+<section class="sb-card mb-4">
+    <div class="sb-card-body">
+        <form method="GET" class="filter-bar">
+            <div><label class="sb-form-label">Search</label><input name="q" value="{{ filters.get('q', '') }}" class="form-control" placeholder="Name, email or month"></div>
+            <div><label class="sb-form-label">Month</label><select name="month" class="form-control"><option value="">All months</option>{% for month in months %}<option {% if filters.get('month') == month %}selected{% endif %}>{{ month }}</option>{% endfor %}</select></div>
+            <div><label class="sb-form-label">Status</label><select name="status" class="form-control"><option value="">All statuses</option>{% for status in ["Pending", "Partial", "Paid"] %}<option {% if filters.get('status') == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></div>
+            <div><label class="sb-form-label">Resident</label><select name="user" class="form-control"><option value="">All residents</option>{% for user in users %}<option value="{{ user.id }}" {% if filters.get('user') == user.id|string %}selected{% endif %}>{{ user.name }}</option>{% endfor %}</select></div>
+            <button class="btn btn-primary px-4">Filter</button>
+        </form>
+    </div>
+</section>
+
+<section class="sb-card">
+    <div class="sb-card-body p-0">
+        <div class="sb-table-wrap">
+            <table class="sb-table">
+                <thead><tr><th>Resident</th><th>Month</th><th>Billed</th><th>Paid</th><th>Balance</th><th>Status</th><th>Due</th></tr></thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td data-label="Resident">{{ user_map.get(payment.user_id).name if user_map.get(payment.user_id) else "Deleted user" }}</td>
+                        <td data-label="Month"><strong>{{ payment.month }}</strong></td>
+                        <td data-label="Billed">{{ payment.currency }} {{ "%.2f"|format(payment.amount) }}</td>
+                        <td data-label="Paid">{{ payment.currency }} {{ "%.2f"|format(payment.paid_amount or 0) }}</td>
+                        <td data-label="Balance">{{ payment.currency }} {{ "%.2f"|format(payment.balance) }}</td>
+                        <td data-label="Status"><span class="status-pill {% if payment.status == 'Paid' %}status-paid{% else %}status-pending{% endif %}">{{ payment.status }}</span></td>
+                        <td data-label="Due">{{ payment.due_date or "-" }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="empty-state">No bills match these filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div class="row mt-4">
+    <div class="col-xl-7 mb-4">
+        <section class="sb-card h-100">
+            <div class="sb-card-header"><div><h2>Payment Proof Review</h2><p>Approve or reject uploaded bank-transfer evidence.</p></div></div>
+            <div class="sb-card-body p-0"><div class="sb-table-wrap"><table class="sb-table">
+                <thead><tr><th>Payment</th><th>Amount</th><th>Submitted</th><th>Proof</th><th>Decision</th></tr></thead>
+                <tbody>
+                    {% for transaction in pending_transactions %}
+                    <tr>
+                        <td data-label="Payment">#{{ transaction.payment_id }}</td>
+                        <td data-label="Amount">{{ "%.2f"|format(transaction.amount) }}</td>
+                        <td data-label="Submitted">{{ transaction.created_at.strftime("%d %b %Y") }}</td>
+                        <td data-label="Proof"><a href="{{ url_for('portal.download_payment_proof', transaction_id=transaction.id) }}" class="btn btn-secondary btn-sm">Download</a></td>
+                        <td data-label="Decision">
+                            <button class="btn btn-primary btn-sm" onclick="reviewProof({{ transaction.id }}, 'approve')">Approve</button>
+                            <button class="btn btn-danger btn-sm" onclick="reviewProof({{ transaction.id }}, 'reject')">Reject</button>
+                        </td>
+                    </tr>
+                    {% else %}<tr><td colspan="5" class="empty-state">No payment proofs await review.</td></tr>{% endfor %}
+                </tbody>
+            </table></div></div>
+        </section>
+    </div>
+    <div class="col-xl-5 mb-4">
+        <section class="sb-card h-100">
+            <div class="sb-card-header"><div><h2>Billing Disputes</h2><p>Respond to resident questions.</p></div></div>
+            <div class="sb-card-body">
+                {% for dispute in disputes %}
+                <div class="p-3 mb-3" style="border:1px solid var(--sb-line);border-radius:12px">
+                    <div class="d-flex justify-content-between"><strong>Payment #{{ dispute.payment_id }}</strong><span class="status-pill {% if dispute.status == 'Open' %}status-pending{% else %}status-paid{% endif %}">{{ dispute.status }}</span></div>
+                    <p class="text-muted small mt-2">{{ dispute.reason }}</p>
+                    {% if dispute.status == "Open" %}
+                    <input id="disputeResponse{{ dispute.id }}" class="form-control mb-2" placeholder="Finance response">
+                    <button class="btn btn-primary btn-sm" onclick="resolveDispute({{ dispute.id }}, 'Resolved')">Resolve</button>
+                    <button class="btn btn-danger btn-sm" onclick="resolveDispute({{ dispute.id }}, 'Rejected')">Reject</button>
+                    {% else %}<small>{{ dispute.admin_response }}</small>{% endif %}
+                </div>
+                {% else %}<div class="empty-state">No billing disputes.</div>{% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function reviewProof(id, decision) {
+    const form = new FormData();
+    form.append("decision", decision);
+    form.append("_csrf_token", window.csrfToken);
+    secureFetch(`/payment-transactions/${id}/verify`, {method:"POST", body:form})
+        .then(async response => ({ok:response.ok, data:await response.json()}))
+        .then(result => {alert(result.ok ? "Payment proof reviewed." : result.data.error); if(result.ok) location.reload();});
+}
+function resolveDispute(id, status) {
+    const form = new FormData();
+    form.append("status", status);
+    form.append("response", document.getElementById(`disputeResponse${id}`).value);
+    form.append("_csrf_token", window.csrfToken);
+    secureFetch(`/disputes/${id}/resolve`, {method:"POST", body:form})
+        .then(async response => ({ok:response.ok, data:await response.json()}))
+        .then(result => {alert(result.ok ? "Dispute updated." : result.data.error); if(result.ok) location.reload();});
+}
+</script>
+{% endblock %}

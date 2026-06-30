@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - billing-instance:/app/instance
+    restart: unless-stopped
+
+volumes:
+  billing-instance:

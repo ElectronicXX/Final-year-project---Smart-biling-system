@@ -1,0 +1,289 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard | Smart Billing{% endblock %}
+{% block content %}
+
+<header class="page-heading">
+    <div>
+        <span class="page-eyebrow">Overview</span>
+        <h1>Admin Dashboard</h1>
+        <p>Monitor monthly billing performance and resident payment activity.</p>
+    </div>
+    <a href="{{ url_for('admin.billing') }}" class="btn btn-primary px-4 py-2">
+        <i class="fas fa-plus mr-2"></i>Manage Bill
+    </a>
+</header>
+
+<div class="row">
+    <div class="col-xl-3 col-sm-6 mb-4">
+        <article class="sb-card metric-card metric-purple">
+            <div class="metric-icon"><i class="fas fa-wallet"></i></div>
+            <span class="metric-label">This Month Revenue</span>
+            <h2 class="metric-value" id="rev">RM {{ "%.2f"|format(current_total) }}</h2>
+        </article>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-4">
+        <article class="sb-card metric-card metric-green">
+            <div class="metric-icon"><i class="fas fa-users"></i></div>
+            <span class="metric-label">Total Residents</span>
+            <h2 class="metric-value" id="users">{{ users|length }}</h2>
+        </article>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-4">
+        <article class="sb-card metric-card metric-orange">
+            <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+            <span class="metric-label">Paid Residents</span>
+            <h2 class="metric-value" id="paid">{{ paid_count }}</h2>
+        </article>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-4">
+        <article class="sb-card metric-card metric-red">
+            <div class="metric-icon"><i class="fas fa-clock"></i></div>
+            <span class="metric-label">Pending Payments</span>
+            <h2 class="metric-value" id="pending">{{ users|length - paid_count }}</h2>
+        </article>
+    </div>
+</div>
+
+{% if session.get("role") == "admin" %}
+<section class="sb-card mb-4">
+    <div class="sb-card-header">
+        <div>
+            <h2>Server Status</h2>
+            <p>Live resource usage and active sessions. Refreshes every 5 seconds.</p>
+        </div>
+        <span class="status-pill status-user" id="server-updated">Loading</span>
+    </div>
+    <div class="sb-card-body">
+        <div class="row">
+            <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
+                <div class="server-stat">
+                    <div class="server-stat-heading">
+                        <span><i class="fas fa-microchip mr-2"></i>CPU Usage</span>
+                        <strong id="server-cpu">--%</strong>
+                    </div>
+                    <div class="server-progress"><span id="server-cpu-bar"></span></div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-sm-6 mb-3 mb-xl-0">
+                <div class="server-stat">
+                    <div class="server-stat-heading">
+                        <span><i class="fas fa-memory mr-2"></i>RAM Usage</span>
+                        <strong id="server-ram">--%</strong>
+                    </div>
+                    <div class="server-progress"><span id="server-ram-bar"></span></div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-sm-6 mb-3 mb-sm-0">
+                <div class="server-stat">
+                    <span><i class="fas fa-database mr-2"></i>Memory Used</span>
+                    <strong class="server-stat-value" id="server-memory">-- / --</strong>
+                </div>
+            </div>
+            <div class="col-xl-3 col-sm-6">
+                <div class="server-stat">
+                    <span><i class="fas fa-user-friends mr-2"></i>Active Visitors</span>
+                    <strong class="server-stat-value" id="server-visitors">-- / --</strong>
+                    <small id="server-capacity-note">Estimated capacity</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<div class="row">
+    <div class="col-xl-8 mb-4">
+        <section class="sb-card">
+            <div class="sb-card-header">
+                <div>
+                    <h2>Revenue Trend</h2>
+                    <p>Actual billing totals with a three-month forecast.</p>
+                </div>
+                <span class="status-pill status-user">Monthly</span>
+            </div>
+            <div class="sb-card-body chart-box">
+                <canvas id="chart1"></canvas>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-4 mb-4">
+        <section class="sb-card">
+            <div class="sb-card-header">
+                <div>
+                    <h2>Payment Status</h2>
+                    <p>Current month collection progress.</p>
+                </div>
+            </div>
+            <div class="sb-card-body chart-box">
+                <canvas id="chart3"></canvas>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="sb-card">
+    <div class="sb-card-header">
+        <div>
+            <h2>Monthly Comparison</h2>
+            <p>Compare total utility costs across billing periods.</p>
+        </div>
+    </div>
+    <div class="sb-card-body chart-box">
+        <canvas id="chart2"></canvas>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartLabels = {{ months|tojson }};
+const chartTotals = {{ totals|tojson }};
+const formatBytes = bytes => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 GB";
+    const gigabytes = bytes / (1024 ** 3);
+    return gigabytes.toFixed(gigabytes >= 10 ? 1 : 2) + " GB";
+};
+
+{% if session.get("role") == "admin" %}
+const updateServerMetrics = () => {
+    fetch("/api/server_metrics")
+        .then(response => {
+            if (!response.ok) throw new Error("Unable to load server metrics");
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById("server-cpu").innerText = data.cpu_percent + "%";
+            document.getElementById("server-ram").innerText = data.ram_percent + "%";
+            document.getElementById("server-cpu-bar").style.width = data.cpu_percent + "%";
+            document.getElementById("server-ram-bar").style.width = data.ram_percent + "%";
+            document.getElementById("server-memory").innerText =
+                formatBytes(data.memory_used_bytes) + " / " + formatBytes(data.memory_total_bytes);
+            document.getElementById("server-visitors").innerText =
+                data.active_visitors + " / " + data.max_concurrent_users;
+            document.getElementById("server-capacity-note").innerText =
+                "Active in last " + data.active_window_minutes + " min / estimated capacity";
+            document.getElementById("server-updated").innerText =
+                "Updated " + new Date(data.updated_at).toLocaleTimeString();
+        })
+        .catch(() => {
+            document.getElementById("server-updated").innerText = "Unavailable";
+        });
+};
+updateServerMetrics();
+setInterval(updateServerMetrics, 5000);
+{% endif %}
+
+const ctx1 = document.getElementById("chart1").getContext("2d");
+const revenueGradient = ctx1.createLinearGradient(0, 0, 0, 280);
+revenueGradient.addColorStop(0, "rgba(98, 92, 246, .28)");
+revenueGradient.addColorStop(1, "rgba(98, 92, 246, 0)");
+
+const chart1 = new Chart(ctx1, {
+    type: "line",
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: "Revenue",
+            data: chartTotals,
+            borderColor: "#625cf6",
+            backgroundColor: revenueGradient,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: "#fff",
+            pointBorderColor: "#625cf6",
+            fill: true,
+            tension: .38
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        scales: {
+            x: {grid: {display: false}},
+            y: {beginAtZero: true, grid: {color: "#efeff6"}}
+        },
+        plugins: {legend: {display: false}}
+    }
+});
+
+const chart2 = new Chart(document.getElementById("chart2"), {
+    type: "bar",
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: "Billing Total",
+            data: chartTotals,
+            backgroundColor: "#625cf6",
+            borderRadius: 7,
+            maxBarThickness: 42
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        scales: {
+            x: {grid: {display: false}},
+            y: {beginAtZero: true, grid: {color: "#efeff6"}}
+        },
+        plugins: {legend: {display: false}}
+    }
+});
+
+const chart3 = new Chart(document.getElementById("chart3"), {
+    type: "doughnut",
+    data: {
+        labels: ["Paid", "Pending"],
+        datasets: [{
+            data: [{{ paid_count }}, {{ users|length - paid_count }}],
+            backgroundColor: ["#2fbd91", "#ef5c72"],
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        cutout: "72%",
+        plugins: {legend: {position: "bottom"}}
+    }
+});
+
+setInterval(() => {
+    fetch("/api/dashboard_data")
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("rev").innerText = "RM " + Number(data.revenue).toFixed(2);
+            document.getElementById("users").innerText = data.users;
+            document.getElementById("paid").innerText = data.paid;
+            document.getElementById("pending").innerText = data.pending;
+            chart1.data.labels = data.months;
+            chart1.data.datasets[0].data = data.totals;
+            chart1.update();
+            chart2.data.labels = data.months;
+            chart2.data.datasets[0].data = data.totals;
+            chart2.update();
+            chart3.data.datasets[0].data = [data.paid, data.pending];
+            chart3.update();
+        });
+}, 5000);
+
+fetch("/api/predict")
+    .then(response => response.json())
+    .then(data => {
+        if (!data.predicted.length) return;
+        const labels = [...chart1.data.labels];
+        data.predicted.forEach((_, index) => labels.push("Forecast " + (index + 1)));
+        chart1.data.labels = labels;
+        chart1.data.datasets.push({
+            label: "Forecast",
+            data: [...chart1.data.datasets[0].data.map(() => null), ...data.predicted],
+            borderColor: "#f4a340",
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 3,
+            fill: false,
+            tension: .35
+        });
+        chart1.options.plugins.legend.display = true;
+        chart1.update();
+    });
+</script>
+{% endblock %}
