@@ -4,7 +4,7 @@ Flask-based hostel billing system with role-based dashboards, monthly cost
 allocation, payment tracking, email reminders, PDF receipts, QR codes, and
 basic billing prediction.
 
-## Generation 2 Update / 第 2 代更新
+## Generation 2 Update
 
 This repository has been updated to Generation 2. The second generation focuses
 on safer billing operations, clearer finance workflows, more payment options,
@@ -141,6 +141,9 @@ Saved secrets are encrypted in the database and only masked values are rendered
 in the browser. SMTP values from `.env` appear as defaults until the first
 managed SMTP configuration is saved.
 
+<img width="1716" height="910" alt="image" src="https://github.com/user-attachments/assets/e7c28243-f929-45f6-8cae-da82e263aeac" />
+
+
 ## Docker
 
 ```powershell
@@ -151,19 +154,16 @@ docker compose up --build
 Open `http://127.0.0.1:5000`. Before production, set a strong `SECRET_KEY`,
 enable HTTPS, and set `SESSION_COOKIE_SECURE=true`.
 
-<img width="1865" height="872" alt="image" src="https://github.com/user-attachments/assets/179a038c-4dd4-4f7b-80d2-c3f8fc17042a" />
+## Admin 
+<img width="1729" height="914" alt="image" src="https://github.com/user-attachments/assets/90f5c94d-31ff-4799-88a4-6affae4d26e5" />
+<img width="1734" height="914" alt="image" src="https://github.com/user-attachments/assets/dee61bc1-801b-432d-9284-00273c5a8738" />
+<img width="1714" height="912" alt="image" src="https://github.com/user-attachments/assets/354ecc88-4b55-4ad0-b907-23b4d561bdfd" />
+<img width="1710" height="922" alt="image" src="https://github.com/user-attachments/assets/0ecb48a3-b66e-4e89-ab50-2c75c1fb9597" />
+<img width="1722" height="912" alt="image" src="https://github.com/user-attachments/assets/0f260c93-b0aa-46c1-a542-b489b3b75285" />
+<img width="1724" height="904" alt="image" src="https://github.com/user-attachments/assets/aad82de8-afe7-475a-8461-d59a5070e982" />
+<img width="1711" height="896" alt="image" src="https://github.com/user-attachments/assets/f9df2e7f-61c4-43ea-93cf-238dc0e032e1" />
 
-<img width="1662" height="843" alt="image" src="https://github.com/user-attachments/assets/cba9afa0-f0a1-4f3e-9274-7fa94969157d" />
-
-<img width="1840" height="872" alt="image" src="https://github.com/user-attachments/assets/f0394b3c-9fb7-4d8d-90d4-ddcd3b7059a2" />
-
-<img width="1831" height="879" alt="image" src="https://github.com/user-attachments/assets/c58c0749-ef7f-4d2e-83b3-f2cab28b35ac" />
-
-<img width="1838" height="871" alt="image" src="https://github.com/user-attachments/assets/90d20ee1-d328-4be4-84f6-450e5169ef84" />
-
-<img width="1854" height="869" alt="image" src="https://github.com/user-attachments/assets/e0c89c3f-c8de-403c-8a95-059c4b81a862" />
-
-<img width="1827" height="873" alt="image" src="https://github.com/user-attachments/assets/5f27f9f7-30cf-4fc0-b4f0-cf32f1fe4bcf" />
-<img width="1846" height="863" alt="image" src="https://github.com/user-attachments/assets/43aee78f-d8bc-40d5-9930-ab2cc6dad9e1" />
-<img width="1511" height="445" alt="image" src="https://github.com/user-attachments/assets/d6a547df-7c61-416e-a097-f150d8f410c3" />
-<img width="1511" height="590" alt="image" src="https://github.com/user-attachments/assets/b47bae8a-e54f-402a-9dc0-f1e7a9a7ca6c" />
+## USer
+<img width="1716" height="910" alt="image" src="https://github.com/user-attachments/assets/5c96ae3b-1ebd-407a-bdf8-88cc17f12425" />
+<img width="1715" height="916" alt="image" src="https://github.com/user-attachments/assets/c5067519-a8b5-455f-810a-616795bbc0c5" />
+<img width="1712" height="901" alt="image" src="https://github.com/user-attachments/assets/0beaa7fd-6d25-4432-bf34-3ff41a3c2ae0" />
